@@ -288,7 +288,7 @@ class AdvancedTextSwitch:
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("text",)
     FUNCTION = "execute"
-    CATEGORY = "Advanced Text"
+    CATEGORY = "lopi999/utils"
 
     def execute(self, mode, index, seed, concat_text="", **kwargs):
         # Get the selected text based on mode
