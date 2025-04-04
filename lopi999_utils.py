@@ -225,7 +225,7 @@ class RandomNormalDistribution:
 
     RETURN_TYPES = ("FLOAT", "INT", "STRING")
     RETURN_NAMES = ("float", "integer", "show_help")
-    FUNCTION = "generate"
+    FUNCTION = "generate_random"
     CATEGORY = "lopi999/utils"
 
     def generate_random(self, mean, std_dev, enable_min_max, output_type, seed, minimum=0.0, maximum=1.0):
@@ -337,6 +337,7 @@ class ZipfSchedulerNode:
     def INPUT_TYPES(cls):
         return {
             "required": {
+                "model": ("MODEL",),
                 "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
                 "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0}),
                 "automatic": ("BOOLEAN", {"default": True}),
@@ -344,7 +345,6 @@ class ZipfSchedulerNode:
             "optional": {
                 "x_start": ("FLOAT", {"default": 3.2, "min": 1.0, "max": 5.0, "step": 0.01}),
                 "x_end": ("FLOAT", {"default": 2.75, "min": 1.0, "max": 5.0, "step": 0.01}),
-                "model": ("MODEL",),
             }
         }
 
