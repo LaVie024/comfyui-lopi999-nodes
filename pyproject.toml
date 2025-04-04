@@ -1,0 +1,14 @@
+[project]
+name = "lopi999-nodes"
+description = "A collection of some nodes I got Deepseek and ChatGPT to make. Mildly useful for some randomness and a scheduler."
+version = "1.0.0"
+license = {file = "LICENSE"}
+
+[project.urls]
+Repository = "https://github.com/LaVie024/comfyui-lopi999-nodes"
+#  Used by Comfy Registry https://comfyregistry.org
+
+[tool.comfy]
+PublisherId = ""
+DisplayName = "comfyui-lopi999-nodes"
+Icon = ""
