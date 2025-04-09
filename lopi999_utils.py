@@ -339,7 +339,7 @@ class ZipfSchedulerNode:
             "required": {
                 "model": ("MODEL",),
                 "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
-                "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0}),
+                "denoise": ("FLOAT", {"default": 1.00, "min": 0.00, "max": 1.00, "step": 0.01}),
                 "automatic": ("BOOLEAN", {"default": True}),
             },
             "optional": {
