@@ -3,37 +3,17 @@ from .utils import AnyType
 import comfy.model_management
 import torch
 import numpy as np
+import comfy.samplers as cs
+from comfy.samplers import SchedulerHandler
 
-def zipf_linear(steps: int, sigma_min: float = 0.01, sigma_max: float = 1.0,
-                          auto_exponent: bool = True, x_start: float = 3.2, x_end: float = 2.75):
+def zipf_linear_scheduler(model_sampling, steps: int, x_start = 3.2, x_end = 2.75):
     """
     Generates a sigma schedule using a Zipf-based weighting function where the exponent
     changes gradually from x_start to x_end over the course of the schedule.
-
-    Args:
-        steps (int): Number of sampling steps.
-        sigma_min (float): Minimum sigma (end of schedule).
-        sigma_max (float): Maximum sigma (start of schedule).
-        auto_exponent (bool): If True, uses default adaptive curve (3.2 -> 2.75).
-        x_start (float): Starting Zipf exponent (only used if auto_exponent=False).
-        x_end (float): Ending Zipf exponent (only used if auto_exponent=False).
-
-    Returns:
-        torch.FloatTensor: Sigma schedule of length (steps + 1)
     """
-    if steps < 1:
-        return torch.FloatTensor([sigma_max])
 
-    # If not auto, validate and adjust exponent bounds
-    if not auto_exponent:
-        if x_end > x_start:
-            if x_end == 3.2:
-                x_start = 3.2
-            else:
-                x_start = x_end + 0.01
-    else:
-        x_start = 3.2
-        x_end = 2.75
+    sigma_min = model_sampling.sigma_min
+    sigma_max = model_sampling.sigma_max
 
     # Build a smooth exponent curve from x_start to x_end
     x_curve = torch.linspace(x_start, x_end, steps, dtype=torch.float32)
@@ -50,6 +30,40 @@ def zipf_linear(steps: int, sigma_min: float = 0.01, sigma_max: float = 1.0,
     sigmas[-1] = sigma_min  # enforce exact min
 
     return sigmas.to(torch.float32)
+
+def zeta_scheduler(model_sampling, steps: int, x_start: float = 0.5, x_end: float = 3.0):
+    """
+    Zeta‐based scheduler with a sliding exponent:
+      exponent(t) = linspace(x_start → x_end) over steps.
+
+    Returns steps+1 noise values, monotonically decreasing.
+    """
+    sigma_min = float(model_sampling.sigma_min)
+    sigma_max = float(model_sampling.sigma_max)
+    dev = model_sampling.sigmas.device
+
+    # 1) build a per-step exponent curve
+    exponents = torch.linspace(x_start, x_end, steps, device=dev, dtype=torch.float32)
+
+    # 2) compute raw weights ∝ k^(–exponent[t])
+    ranks = torch.arange(1, steps + 1, device=dev, dtype=torch.float32)
+    w = ranks.pow(-exponents)
+    w = w / w.sum()
+
+    # 3) build a decreasing cumulative decay
+    cum   = torch.cat([torch.tensor([0.0], device=dev), torch.cumsum(w, dim=0)])
+    decay = 1.0 - cum / cum[-1]   # starts @1, ends @0
+
+    # 4) map into [σ_max → σ_min], enforce exact final min
+    out = sigma_min + (sigma_max - sigma_min) * decay
+    out[-1] = sigma_min
+
+    return out
+
+cs.SCHEDULER_HANDLERS["zipf_linear"] = SchedulerHandler(zipf_linear_scheduler)
+cs.SCHEDULER_HANDLERS["zeta"]       = SchedulerHandler(zeta_scheduler)
+cs.SCHEDULER_NAMES = list(cs.SCHEDULER_HANDLERS)
+cs.KSampler.SCHEDULERS = cs.SCHEDULER_NAMES
 
 class RandomSDXLLatentSize:
     # Class-level resolution definitions
@@ -353,37 +367,74 @@ class ZipfSchedulerNode:
     CATEGORY = "lopi999/utils"
 
     def get_sigmas(self, steps, denoise, automatic, x_start=3.2, x_end=2.75, model=None):
-        sigma_max = 1.0
-        sigma_min = 0.01
-
-        if model is not None:
-            try:
-                model_sampling = model.get_model_object("model_sampling")
-                sigma_max = float(model_sampling.sigma_max.cpu().item())
-                sigma_min = float(model_sampling.sigma_min.cpu().item())
-                sigma_min = max(sigma_min, 1e-5)  # avoid 0
-            except Exception:
-                pass
+        model_sampling = model.get_model_object("model_sampling")
+        sigma_max = float(model_sampling.sigma_max.cpu().item())
+        sigma_min = float(model_sampling.sigma_min.cpu().item())
+        sigma_min = max(sigma_min, 1e-5)  # avoid 0
 
         if denoise < 1.0 and denoise > 0.0:
             total_steps = int(steps / denoise)
-            full_sigmas = zipf_linear(
+            full_sigmas = zipf_linear_scheduler(
+                model_sampling,
                 total_steps,
-                sigma_min,
-                sigma_max,
-                auto_exponent=automatic,
                 x_start=x_start,
                 x_end=x_end
             )
             sigmas = full_sigmas[-(steps + 1):]
         else:
-            sigmas = zipf_linear(
+            sigmas = zipf_linear_scheduler(
+                model_sampling,
                 steps,
-                sigma_min,
-                sigma_max,
-                auto_exponent=automatic,
                 x_start=x_start,
                 x_end=x_end
             )
 
         return (sigmas,)
+
+class ZetaSchedulerNode:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "model": ("MODEL",),
+                "steps": ("INT", {"default": 20, "min": 1, "max": 10000}),
+                "denoise": ("FLOAT", {"default": 1.00, "min": 0.00, "max": 1.00, "step": 0.01}),
+                "automatic": ("BOOLEAN", {"default": True}),
+            },
+            "optional": {
+                "x_start": ("FLOAT", {"default": 0.50, "min": 0.01, "max": 100.0, "step": 0.01}),
+                "x_end": ("FLOAT", {"default": 3.00, "min": 0.01, "max": 100.0, "step": 0.01}),
+            }
+        }
+
+    RETURN_TYPES = ("SIGMAS",)
+    FUNCTION = "get_sigmas"
+    CATEGORY = "lopi999/utils"
+
+    def get_sigmas(self, model, automatic, steps: int,
+                   denoise: float = 1.0,
+                   x_start: float = 0.5,
+                   x_end:   float = 3.0):
+
+        model_sampling = model.get_model_object("model_sampling")
+
+        if denoise < 1.00 and denoise > 0.00:
+            steps = int(steps / denoise)
+
+        if automatic:
+            sigmas = zeta_scheduler(
+                    model_sampling,
+                    steps,
+                    x_start = 0.5,
+                    x_end = 3.0
+                )
+        else:
+            sigmas = zeta_scheduler(
+                    model_sampling,
+                    steps,
+                    x_start,
+                    x_end
+                )
+
+        return (sigmas,)
+
