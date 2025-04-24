@@ -1,5 +1,5 @@
 # comfyui-lopi999-nodes
-A collection of some nodes I got Deepseek and ChatGPT to make. Mildly useful for some randomness and a scheduler.
+Utility nodes for some randomness in your workflows, like random latent sizes. Also includes two schedulers that can be used with any KSampler node.
 
 # Node List
 
