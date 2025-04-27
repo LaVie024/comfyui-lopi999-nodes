@@ -1,7 +1,7 @@
 [project]
 name = "lopi999-nodes"
 description = "Utility nodes for some randomness in your workflows, like random latent sizes. Also includes two schedulers that can be used with any KSampler node."
-version = "1.0.4"
+version = "1.0.5"
 license = {file = "LICENSE"}
 
 [project.urls]
