@@ -9,30 +9,29 @@ import comfy.samplers as cs
 from comfy.samplers import SchedulerHandler
 from nodes import MAX_RESOLUTION
 
-def zipf_linear_scheduler(model_sampling, steps: int, x_start = 3.2, x_end = 2.75):
-    """
-    Generates a sigma schedule using a Zipf-based weighting function where the exponent
-    changes gradually from x_start to x_end over the course of the schedule.
-    """
+def zipf_linear_scheduler(model_sampling, steps: int, x_start=3.2, x_end=2.75):
+    sigma_min = float(model_sampling.sigma_min)
+    sigma_max = float(model_sampling.sigma_max)
 
-    sigma_min = model_sampling.sigma_min
-    sigma_max = model_sampling.sigma_max
+    device = torch.device('cpu')
 
-    # Build a smooth exponent curve from x_start to x_end
-    x_curve = torch.linspace(x_start, x_end, steps, dtype=torch.float32)
-    ranks = torch.arange(1, steps + 1, dtype=torch.float32)
+    x_curve = torch.linspace(x_start, x_end, steps,
+                             dtype=torch.float32, device=device)
+    ranks = torch.arange(1, steps + 1,
+                         dtype=torch.float32, device=device)
+
     weights = 1.0 / (ranks ** x_curve)
-    weights /= weights.sum()
+    weights = weights / weights.sum()
 
-    # Convert to decreasing cumulative distribution
-    cum_weights = torch.cat([torch.tensor([0.0]), torch.cumsum(weights, dim=0)])
+    cum_weights = torch.cat([
+        torch.tensor([0.0], dtype=torch.float32, device=device),
+        torch.cumsum(weights, dim=0)
+    ])
     cum_weights = 1.0 - cum_weights / cum_weights[-1]
+    sigmas = cum_weights.mul_(sigma_max - sigma_min).add_(sigma_min)
+    sigmas[-1] = sigma_min
 
-    # Convert cumulative weights to sigma values
-    sigmas = sigma_min + (sigma_max - sigma_min) * cum_weights
-    sigmas[-1] = sigma_min  # enforce exact min
-
-    return sigmas.to(torch.float32)
+    return sigmas
 
 def zeta_scheduler(model_sampling, steps: int, x_start: float = 0.5, x_end: float = 3.0):
     """
