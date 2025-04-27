@@ -5,6 +5,7 @@ from .lopi999_utils import ZipfSchedulerNode
 from .lopi999_utils import ZetaSchedulerNode
 from .lopi999_utils import SDXLEmptyLatentSizePicker_v2
 from .lopi999_utils import Lopi999InputParameters
+from .lopi999_utils import ModelParameters
 
 NODE_CLASS_MAPPINGS = {
     "RandomSDXLLatentSize": RandomSDXLLatentSize,
@@ -13,7 +14,8 @@ NODE_CLASS_MAPPINGS = {
     "ZipfSchedulerNode": ZipfSchedulerNode,
     "ZetaSchedulerNode": ZetaSchedulerNode,
     "SDXLEmptyLatentSizePicker_v2": SDXLEmptyLatentSizePicker_v2,
-    "Lopi999InputParameters": Lopi999InputParameters
+    "Lopi999InputParameters": Lopi999InputParameters,
+    "ModelParameters": ModelParameters
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -23,7 +25,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ZipfSchedulerNode": "Zipf Scheduler",
     "ZetaSchedulerNode": "Zeta Scheduler",
     "SDXLEmptyLatentSizePicker_v2": "SDXL Empty Latent Size Picker v2",
-    "Lopi999InputParameters": "Input Parameters (lopi999)"
+    "Lopi999InputParameters": "Input Parameters (lopi999)",
+    "ModelParameters": "Model Parameters"
 }
 
 __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS']
