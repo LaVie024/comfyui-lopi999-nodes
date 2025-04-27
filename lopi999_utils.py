@@ -12,8 +12,7 @@ from nodes import MAX_RESOLUTION
 def zipf_linear_scheduler(model_sampling, steps: int, x_start=3.2, x_end=2.75):
     sigma_min = float(model_sampling.sigma_min)
     sigma_max = float(model_sampling.sigma_max)
-
-    device = torch.device('cpu')
+    device = model_sampling.sigmas.device
 
     x_curve = torch.linspace(x_start, x_end, steps,
                              dtype=torch.float32, device=device)
