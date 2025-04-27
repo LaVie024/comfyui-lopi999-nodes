@@ -1,4 +1,5 @@
 import random
+import folder_paths
 from .utils import AnyType
 import comfy.model_management
 import torch
@@ -483,29 +484,121 @@ class SDXLEmptyLatentSizePicker_v2:
 
 class Lopi999InputParameters:
     # Credits to giris and alexopus for this code, modified a bit
-    RETURN_TYPES = ("INT", "FLOAT", comfy.samplers.KSampler.SAMPLERS, cs.KSampler.SCHEDULERS + ['align_your_steps', 'gits'])
-    RETURN_NAMES = ("steps", "cfg", "sampler", "scheduler")
+    RETURN_TYPES = (
+        "INT",                                               # steps
+        "FLOAT",                                             # cfg
+        comfy.samplers.KSampler.SAMPLERS,                    # sampler
+        cs.KSampler.SCHEDULERS,                              # scheduler (core)
+        cs.KSampler.SCHEDULERS + ['align_your_steps','gits'] # scheduler+extra (extended)
+    )
+    RETURN_NAMES = (
+        "steps",
+        "cfg",
+        "sampler",
+        "scheduler",
+        "scheduler+extra",
+    )
     OUTPUT_TOOLTIPS = (
         "steps (INT)",
         "cfg (FLOAT)",
         "sampler (SAMPLERS)",
         "scheduler (SCHEDULERS)",
+        "scheduler+extra (SCHEDULERS + extra)",
     )
     FUNCTION = "get_values"
 
-    CATEGORY = "ImageSaver/utils"
-    DESCRIPTION = "Combined node for seed, steps, cfg, sampler, scheduler and denoise."
+    CATEGORY = "lopi999/utils"
 
     @classmethod
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "steps": ("INT", {"default": 20, "min": 1, "max": 10000, "tooltip": "The number of steps used in the denoising process."}),
-                "cfg": ("FLOAT", {"default": 7.0, "min": 0.0, "max": 100.0, "step":0.5, "tooltip": "The Classifier-Free Guidance scale balances creativity and adherence to the prompt. Higher values result in images more closely matching the prompt however too high values will negatively impact quality."}),
-                "sampler": (comfy.samplers.KSampler.SAMPLERS, {"tooltip": "The algorithm used when sampling, this can affect the quality, speed, and style of the generated output."}),
-                "scheduler": (cs.KSampler.SCHEDULERS + ['align_your_steps', 'gits'], {"tooltip": "The scheduler controls how noise is gradually removed to form the image."}),
+                "steps": (
+                    "INT",
+                    {
+                        "default": 20,
+                        "min": 1,
+                        "max": 10000,
+                        "tooltip": "The number of steps used in the denoising process."
+                    }
+                ),
+                "cfg": (
+                    "FLOAT",
+                    {
+                        "default": 7.0,
+                        "min": 0.0,
+                        "max": 100.0,
+                        "step": 0.5,
+                        "tooltip": "The Classifier-Free Guidance scale balances creativity and adherence to the prompt."
+                    }
+                ),
+                "sampler": (
+                    comfy.samplers.KSampler.SAMPLERS,
+                    {"tooltip": "The algorithm used when sampling."}
+                ),
+                "scheduler": (
+                    cs.KSampler.SCHEDULERS,  # only core list here
+                    {"tooltip": "The scheduler controls how noise is gradually removed."}
+                ),
             }
         }
 
     def get_values(self, steps, cfg, sampler, scheduler):
-        return (steps, cfg, sampler, sampler, scheduler, scheduler)
+        # We simply mirror the chosen scheduler into both outputs:
+        return (
+            steps,
+            cfg,
+            sampler,
+            scheduler,  # core
+            scheduler,  # extra
+        )
+
+
+
+class ModelParameters:
+    ckpt_list = folder_paths.get_filename_list("checkpoints")
+    vae_list  = folder_paths.get_filename_list("vae")
+
+    RETURN_TYPES = (
+        ckpt_list,                # first output: ckpt_name
+        ckpt_list + ["None"],     # second output: ckpt_name_none
+        vae_list,                 # third output: vae_name
+        ["Baked VAE"] + vae_list, # fourth output: vae_name_baked
+    )
+    RETURN_NAMES = (
+        "ckpt_name_sans_none",
+        "ckpt_name",
+        "vae_name_sans_baked",
+        "vae_name",
+    )
+    FUNCTION = "get_names"
+    CATEGORY = "lopi999/utils"
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "ckpt_name": (
+                    cls.ckpt_list,
+                    {
+                        "default": cls.ckpt_list[0] if cls.ckpt_list else "",
+                        "tooltip": "Which checkpoint to use"
+                    }
+                ),
+                "vae_name": (
+                    cls.vae_list,
+                    {
+                        "default": cls.vae_list[0] if cls.vae_list else "",
+                        "tooltip": "Which VAE to use"
+                    }
+                ),
+            }
+        }
+
+    def get_names(self, ckpt_name, vae_name):
+        return (
+            ckpt_name,
+            ckpt_name,
+            vae_name,
+            vae_name,
+        )
