@@ -3,8 +3,10 @@ from .utils import AnyType
 import comfy.model_management
 import torch
 import numpy as np
+import comfy.sd
 import comfy.samplers as cs
 from comfy.samplers import SchedulerHandler
+from nodes import MAX_RESOLUTION
 
 def zipf_linear_scheduler(model_sampling, steps: int, x_start = 3.2, x_end = 2.75):
     """
@@ -60,10 +62,18 @@ def zeta_scheduler(model_sampling, steps: int, x_start: float = 0.5, x_end: floa
 
     return out
 
-cs.SCHEDULER_HANDLERS["zipf_linear"] = SchedulerHandler(zipf_linear_scheduler)
-cs.SCHEDULER_HANDLERS["zeta"]       = SchedulerHandler(zeta_scheduler)
-cs.SCHEDULER_NAMES = list(cs.SCHEDULER_HANDLERS)
-cs.KSampler.SCHEDULERS = cs.SCHEDULER_NAMES
+for name, fn in (
+    ("zipf_linear", zipf_linear_scheduler),
+    ("zeta",        zeta_scheduler),
+):
+    if name not in cs.SCHEDULER_HANDLERS:
+        cs.SCHEDULER_HANDLERS[name] = SchedulerHandler(fn)
+
+for name in ("zipf_linear", "zeta"):
+    if name not in cs.SCHEDULER_NAMES:
+        cs.SCHEDULER_NAMES.append(name)
+    if name not in cs.KSampler.SCHEDULERS:
+        cs.KSampler.SCHEDULERS.append(name)
 
 class RandomSDXLLatentSize:
     # Class-level resolution definitions
@@ -76,10 +86,11 @@ class RandomSDXLLatentSize:
     ]
 
     portrait_res = [
-        ("704x1408", 0.5), ("704x1344", 0.52), ("768x1344", 0.57),
-        ("768x1280", 0.6), ("832x1216", 0.68), ("832x1152", 0.72),
-        ("896x1152", 0.78), ("896x1088", 0.82), ("960x1088", 0.88),
-        ("960x1024", 0.94)
+        ("576x1728", 0.33), ("576x1664", 0.35), ("640x1600", 0.4),
+        ("640x1536", 0.42), ("704x1472", 0.48), ("704x1408", 0.5),
+        ("704x1344", 0.52), ("768x1344", 0.57), ("768x1280", 0.6),
+        ("832x1216", 0.68), ("832x1152", 0.72), ("896x1152", 0.78),
+        ("896x1088", 0.82), ("960x1088", 0.88), ("960x1024", 0.94)
     ]
 
     square_res = [("1024x1024", 1.0)]
@@ -91,7 +102,7 @@ class RandomSDXLLatentSize:
     # Default indices
     default_landscape_min = landscape_options.index("1024x1024 (1.00)")
     default_landscape_max = landscape_options.index("1728x576 (3.00)")
-    default_portrait_min = portrait_options.index("704x1408 (0.50)")
+    default_portrait_min = portrait_options.index("576x1728 (0.33)")
     default_portrait_max = portrait_options.index("1024x1024 (1.00)")
 
     RETURN_TYPES = ("LATENT", "INT", "INT", "STRING", "STRING")
@@ -109,7 +120,7 @@ class RandomSDXLLatentSize:
                 "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff}),
                 "landscape": ("BOOLEAN", {"default": True}),
                 "portrait": ("BOOLEAN", {"default": True}),
-                "enable_1_5x_resolution": ("BOOLEAN", {"default": False}),
+                "resolution_multiplier": ("FLOAT", {"default": 1.00, "min": 0.01, "max": 100, "step": 0.05}),
                 "landscape_min_res": (cls.landscape_options, {"default": cls.landscape_options[cls.default_landscape_min]}),
                 "landscape_max_res": (cls.landscape_options, {"default": cls.landscape_options[cls.default_landscape_max]}),
                 "portrait_min_res": (cls.portrait_options, {"default": cls.portrait_options[cls.default_portrait_min]}),
@@ -125,7 +136,7 @@ class RandomSDXLLatentSize:
         ratio = float(parts[1][1:-1])  # Remove parentheses
         return resolution, ratio
 
-    def generate(self, seed, landscape, portrait, enable_1_5x_resolution,
+    def generate(self, seed, landscape, portrait, resolution_multiplier,
                 landscape_min_res, landscape_max_res,
                 portrait_min_res, portrait_max_res, batch_size):
         # Set the random seed for reproducibility
@@ -191,10 +202,10 @@ class RandomSDXLLatentSize:
             selected_res = random.choice(selected_group[1])
             w, h = map(int, selected_res[0].split('x'))
 
-        # Apply 1.5x resolution if enabled
-        if enable_1_5x_resolution:
-            w = int(w * 1.5)
-            h = int(h * 1.5)
+        # Apply resolution multiplier resolution if enabled
+        if resolution_multiplier != 1:
+            w = int(float(w) * resolution_multiplier)
+            h = int(float(h) * resolution_multiplier)
 
         # Generate latent (still using 8x downscaling)
         latent_height = h // 8
@@ -206,14 +217,14 @@ class RandomSDXLLatentSize:
         help_text += f"Landscape Range: {landscape_min_res} to {landscape_max_res}\n"
         help_text += f"Portrait Range: {portrait_min_res} to {portrait_max_res}\n"
         help_text += f"Selected Resolution: {w}x{h}"
-        if enable_1_5x_resolution:
-            help_text += " (1.5x scaled)"
+        if resolution_multiplier != 1:
+            help_text += f" ({resolution_multiplier}x scaled)"
 
         return (
             {"samples": latent},
             w,
             h,
-            f"{w}x{h}" + (" (1.5x)" if enable_1_5x_resolution else ""),
+            f"{w}x{h}" + (f" ({resolution_multiplier}x)" if resolution_multiplier != 1 else ""),
             help_text,
         )
 
@@ -438,3 +449,63 @@ class ZetaSchedulerNode:
 
         return (sigmas,)
 
+class SDXLEmptyLatentSizePicker_v2:
+    def __init__(self):
+        self.device = comfy.model_management.intermediate_device()
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {
+            "resolution": (["512x2048 (0.25)","512x1984 (0.26)","512x1920 (0.27)","512x1856 (0.28)","576x1792 (0.32)","576x1728 (0.33)","576x1664 (0.35)","640x1600 (0.4)","640x1536 (0.42)","704x1472 (0.48)","704x1408 (0.5)","704x1344 (0.52)","768x1344 (0.57)","768x1280 (0.6)","832x1216 (0.68)","832x1152 (0.72)","896x1152 (0.78)","896x1088 (0.82)","960x1088 (0.88)","960x1024 (0.94)","1024x1024 (1.0)","1024x960 (1.8)","1088x960 (1.14)","1088x896 (1.22)","1152x896 (1.30)","1152x832 (1.39)","1216x832 (1.47)","1280x768 (1.68)","1344x768 (1.76)","1408x704 (2.0)","1472x704 (2.10)","1536x640 (2.4)","1600x640 (2.5)","1664x576 (2.90)","1728x576 (3.0)","1792x576 (3.12)","1856x512 (3.63)","1920x512 (3.76)","1984x512 (3.89)","2048x512 (4.0)",], {"default": "1024x1024 (1.0)"}),
+            "batch_size": ("INT", {"default": 1, "min": 1, "max": 4096}),
+            "width_override": ("INT", {"default": 0, "min": 0, "max": MAX_RESOLUTION, "step": 8}),
+            "height_override": ("INT", {"default": 0, "min": 0, "max": MAX_RESOLUTION, "step": 8}),
+            "resolution_multiplier": ("FLOAT", {"default": 1.00, "min": 0.01, "max": 100, "step": 0.05}),
+            "swap_dimensions": ("BOOLEAN", {"default": False}),
+            }}
+
+    RETURN_TYPES = ("LATENT","INT","INT","STRING")
+    RETURN_NAMES = ("LATENT","width","height","resolution_text")
+    FUNCTION     = "execute"
+    CATEGORY     = "lopi999/utils"
+
+    def execute(self, resolution, batch_size, swap_dimensions, width_override=0, height_override=0, resolution_multiplier=1.0):
+        width, height = resolution.split(" ")[0].split("x")
+        width  = width_override  if width_override  > 0 else int(float(width)  * resolution_multiplier)
+        height = height_override if height_override > 0 else int(float(height) * resolution_multiplier)
+
+        if swap_dimensions:
+            width, height = height, width
+
+        latent = torch.zeros([batch_size, 4, height // 8, width // 8], device=self.device)
+
+        return ({"samples":latent}, width, height,f"{width}x{height}")
+
+class Lopi999InputParameters:
+    # Credits to giris and alexopus for this code, modified a bit
+    RETURN_TYPES = ("INT", "FLOAT", comfy.samplers.KSampler.SAMPLERS, cs.KSampler.SCHEDULERS + ['align_your_steps', 'gits'])
+    RETURN_NAMES = ("steps", "cfg", "sampler", "scheduler")
+    OUTPUT_TOOLTIPS = (
+        "steps (INT)",
+        "cfg (FLOAT)",
+        "sampler (SAMPLERS)",
+        "scheduler (SCHEDULERS)",
+    )
+    FUNCTION = "get_values"
+
+    CATEGORY = "ImageSaver/utils"
+    DESCRIPTION = "Combined node for seed, steps, cfg, sampler, scheduler and denoise."
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "steps": ("INT", {"default": 20, "min": 1, "max": 10000, "tooltip": "The number of steps used in the denoising process."}),
+                "cfg": ("FLOAT", {"default": 7.0, "min": 0.0, "max": 100.0, "step":0.5, "tooltip": "The Classifier-Free Guidance scale balances creativity and adherence to the prompt. Higher values result in images more closely matching the prompt however too high values will negatively impact quality."}),
+                "sampler": (comfy.samplers.KSampler.SAMPLERS, {"tooltip": "The algorithm used when sampling, this can affect the quality, speed, and style of the generated output."}),
+                "scheduler": (cs.KSampler.SCHEDULERS + ['align_your_steps', 'gits'], {"tooltip": "The scheduler controls how noise is gradually removed to form the image."}),
+            }
+        }
+
+    def get_values(self, steps, cfg, sampler, scheduler):
+        return (steps, cfg, sampler, sampler, scheduler, scheduler)
