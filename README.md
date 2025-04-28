@@ -4,7 +4,7 @@ Utility nodes for some randomness in your workflows, like random latent sizes. A
 # Node List
 
 ## Random SDXL Latent Size
-![Random SDXL Latent Size](https://imgur.com/a/57wyyeF)
+![Random SDXL Latent Size](https://i.imgur.com/n1xiaKh.png)
 
 This node is sort of the one that started this collection of nodes. It is a fairly straightforward node based heavily on the Empty Latent Picker node from [ComfyUI_essentials](https://github.com/cubiq/ComfyUI_essentials). Most of the functions are pretty self-explanitory. Landscape and portrait resolutions can either be included or excluded, and one can define what the minimum landscape and the maximum landscape resolutions should be.
 
