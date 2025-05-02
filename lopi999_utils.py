@@ -6,7 +6,10 @@ import torch
 import numpy as np
 import comfy.sd
 import comfy.samplers as cs
+import inspect
 from comfy.samplers import SchedulerHandler
+from comfy.samplers import KSAMPLER_NAMES
+from comfy.k_diffusion import sampling as kdiff
 from nodes import MAX_RESOLUTION
 
 def zipf_linear_scheduler(model_sampling, steps: int, x_start=3.2, x_end=2.75):
@@ -73,6 +76,29 @@ for name in ("zipf_linear", "zeta"):
         cs.SCHEDULER_NAMES.append(name)
     if name not in cs.KSampler.SCHEDULERS:
         cs.KSampler.SCHEDULERS.append(name)
+
+def register_custom_samplers(module):
+    """
+    Registers sample_<foo> both in cs.KSampler and in the k‐diffusion namespace,
+    so that Comfy’s ksampler() lookup will find it.
+    """
+    for attr, fn in inspect.getmembers(module, inspect.isfunction):
+        if not attr.startswith("sample_"):
+            continue
+        name = attr[len("sample_"):]              # e.g. "euler_extsig_cfg_pp"
+        short_fn = fn
+
+        # 1) make it selectable in the UI
+        if hasattr(cs, "KSAMPLER_NAMES") and name not in cs.KSAMPLER_NAMES:
+            cs.KSAMPLER_NAMES.append(name)
+        if hasattr(cs.KSampler, "SAMPLERS") and name not in cs.KSampler.SAMPLERS:
+            cs.KSampler.SAMPLERS.append(name)
+
+        # 2) patch it onto the KSampler class (in case other code calls it)
+        setattr(cs.KSampler, attr, short_fn)
+
+        # 3) patch it into comfy.k_diffusion.sampling so ksampler() can find it
+        setattr(kdiff, attr, short_fn)
 
 class RandomSDXLLatentSize:
     # Class-level resolution definitions
