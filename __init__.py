@@ -7,6 +7,10 @@ from .lopi999_utils import SDXLEmptyLatentSizePicker_v2
 from .lopi999_utils import Lopi999InputParameters
 from .lopi999_utils import ModelParameters
 
+from . import sampler_list
+from .lopi999_utils import register_custom_samplers
+register_custom_samplers(sampler_list)
+
 NODE_CLASS_MAPPINGS = {
     "RandomSDXLLatentSize": RandomSDXLLatentSize,
     "RandomNormalDistribution": RandomNormalDistribution,
@@ -15,7 +19,7 @@ NODE_CLASS_MAPPINGS = {
     "ZetaSchedulerNode": ZetaSchedulerNode,
     "SDXLEmptyLatentSizePicker_v2": SDXLEmptyLatentSizePicker_v2,
     "Lopi999InputParameters": Lopi999InputParameters,
-    "ModelParameters": ModelParameters
+    "ModelParameters": ModelParameters,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -26,7 +30,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ZetaSchedulerNode": "Zeta Scheduler",
     "SDXLEmptyLatentSizePicker_v2": "SDXL Empty Latent Size Picker v2",
     "Lopi999InputParameters": "Input Parameters (lopi999)",
-    "ModelParameters": "Model Parameters"
+    "ModelParameters": "Model Parameters",
 }
 
 __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS']
