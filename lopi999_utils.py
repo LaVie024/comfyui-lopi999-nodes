@@ -531,7 +531,7 @@ class Lopi999InputParameters:
     )
     FUNCTION = "get_values"
 
-    CATEGORY = "lopi999/utils"
+    CATEGORY = "lopi999/deprecated"
 
     @classmethod
     def INPUT_TYPES(cls):
