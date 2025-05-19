@@ -29,10 +29,6 @@ This does require a bit of explaining. ComfyUI cannot output a tuple to a tuple 
 
 This was about the best implementation I could come up with. It allows for both specifying what model a loader should load, and then saving it to metadata.
 
-### Input Parameters
-![Input Parameters](https://i.imgur.com/VMHJ2Xr.png)
-Credits to alexopuss and griss for the original code to this. This node was being worked on for the same reason that I wanted to work on model parameters, an actual proper way to get parameters for the sampler and save them to metadata. My issue with the original implementation, were all the unecessary outputs and inputs. That, and this is when I first realized there was an issue with how Comfy manages tuples as inputs. This should output a few extra lines for the schedulers such that it can work with custom KSamplers.
-
 # Schedulers
 
 ## Zipf Scheduler
