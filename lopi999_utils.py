@@ -85,7 +85,7 @@ def register_custom_samplers(module):
     for attr, fn in inspect.getmembers(module, inspect.isfunction):
         if not attr.startswith("sample_"):
             continue
-        name = attr[len("sample_"):]              # e.g. "euler_extsig_cfg_pp"
+        name = attr[len("sample_"):]
         short_fn = fn
 
         # 1) make it selectable in the UI
@@ -100,7 +100,22 @@ def register_custom_samplers(module):
         # 3) patch it into comfy.k_diffusion.sampling so ksampler() can find it
         setattr(kdiff, attr, short_fn)
 
-class RandomSDXLLatentSize:
+class node_RandomBoolean:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {"required": {"seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff})}}
+
+    RETURN_TYPES = ("BOOLEAN", "INT", "INT")
+    RETURN_NAMES = ("BOOLEAN", "INT", "INT+1")
+    FUNCTION = "randBool"
+    CATEGORY = "lopi999/utils"
+
+    def randBool(self, seed):
+        random.seed(seed)
+        x = random.randint(1, 100) % 2
+        return (bool(x), x, (x+1))
+
+class node_RandomSDXLLatentSize:
     # Class-level resolution definitions
     landscape_res = [
         ("1024x960", 1.07), ("1088x960", 1.13), ("1088x896", 1.21),
@@ -253,7 +268,7 @@ class RandomSDXLLatentSize:
             help_text,
         )
 
-class RandomNormalDistribution:
+class node_RandomNormalDistribution:
     def __init__(self):
         pass
 
@@ -313,7 +328,7 @@ class RandomNormalDistribution:
         else:
             return (value, int_value, help_text)
 
-class AdvancedTextSwitch:
+class node_AdvancedTextSwitch:
     @classmethod
     def INPUT_TYPES(cls):
         # Create input types with concat at top (optional)
@@ -382,7 +397,7 @@ class AdvancedTextSwitch:
 
         return visibility
 
-class ZipfSchedulerNode:
+class node_ZipfSchedulerNode:
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -427,7 +442,7 @@ class ZipfSchedulerNode:
 
         return (sigmas,)
 
-class ZetaSchedulerNode:
+class node_ZetaSchedulerNode:
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -474,7 +489,7 @@ class ZetaSchedulerNode:
 
         return (sigmas,)
 
-class SDXLEmptyLatentSizePicker_v2:
+class node_SDXLEmptyLatentSizePicker_v2:
     def __init__(self):
         self.device = comfy.model_management.intermediate_device()
 
@@ -506,97 +521,9 @@ class SDXLEmptyLatentSizePicker_v2:
 
         return ({"samples":latent}, width, height,f"{width}x{height}")
 
-class Lopi999InputParameters:
-    # Credits to giris and alexopus for this code, modified a bit
-    RETURN_TYPES = (
-        "INT",                                               # steps
-        "FLOAT",                                             # cfg
-        comfy.samplers.KSampler.SAMPLERS,                    # sampler
-        cs.KSampler.SCHEDULERS,                              # scheduler (core)
-        cs.KSampler.SCHEDULERS + ['align_your_steps','gits'] # scheduler+extra (extended)
-    )
-    RETURN_NAMES = (
-        "steps",
-        "cfg",
-        "sampler",
-        "scheduler",
-        "scheduler+extra",
-    )
-    OUTPUT_TOOLTIPS = (
-        "steps (INT)",
-        "cfg (FLOAT)",
-        "sampler (SAMPLERS)",
-        "scheduler (SCHEDULERS)",
-        "scheduler+extra (SCHEDULERS + extra)",
-    )
-    FUNCTION = "get_values"
-
-    CATEGORY = "lopi999/deprecated"
-
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {
-            "required": {
-                "steps": (
-                    "INT",
-                    {
-                        "default": 20,
-                        "min": 1,
-                        "max": 10000,
-                        "tooltip": "The number of steps used in the denoising process."
-                    }
-                ),
-                "cfg": (
-                    "FLOAT",
-                    {
-                        "default": 7.0,
-                        "min": 0.0,
-                        "max": 100.0,
-                        "step": 0.5,
-                        "tooltip": "The Classifier-Free Guidance scale balances creativity and adherence to the prompt."
-                    }
-                ),
-                "sampler": (
-                    comfy.samplers.KSampler.SAMPLERS,
-                    {"tooltip": "The algorithm used when sampling."}
-                ),
-                "scheduler": (
-                    cs.KSampler.SCHEDULERS,  # only core list here
-                    {"tooltip": "The scheduler controls how noise is gradually removed."}
-                ),
-            }
-        }
-
-    def get_values(self, steps, cfg, sampler, scheduler):
-        # We simply mirror the chosen scheduler into both outputs:
-        return (
-            steps,
-            cfg,
-            sampler,
-            scheduler,  # core
-            scheduler,  # extra
-        )
-
-
-
-class ModelParameters:
+class node_ModelParameters:
     ckpt_list = folder_paths.get_filename_list("checkpoints")
     vae_list  = folder_paths.get_filename_list("vae")
-
-    RETURN_TYPES = (
-        ckpt_list,                # first output: ckpt_name
-        ckpt_list + ["None"],     # second output: ckpt_name_none
-        vae_list,                 # third output: vae_name
-        ["Baked VAE"] + vae_list, # fourth output: vae_name_baked
-    )
-    RETURN_NAMES = (
-        "ckpt_name_sans_none",
-        "ckpt_name",
-        "vae_name_sans_baked",
-        "vae_name",
-    )
-    FUNCTION = "get_names"
-    CATEGORY = "lopi999/utils"
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -618,6 +545,11 @@ class ModelParameters:
                 ),
             }
         }
+
+    RETURN_TYPES = (ckpt_list, ckpt_list + ["None"], vae_list, ["Baked VAE"] + vae_list,)
+    RETURN_NAMES = ("ckpt_name_sans_none", "ckpt_name", "vae_name_sans_baked", "vae_name",)
+    FUNCTION = "get_names"
+    CATEGORY = "lopi999/utils"
 
     def get_names(self, ckpt_name, vae_name):
         return (
