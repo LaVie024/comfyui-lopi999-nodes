@@ -589,3 +589,41 @@ class node_ParametersToString:
         output = (initialPrefix + ((f"Seed: {seed}" + prefix) if include_seed else "") + prefix.join((f"Steps: {steps}", f"CFG: {cfg}", f"Sampler: {sampler}", f"Scheduler: {scheduler}", f"Denoise: {denoise:.2f}")))
 
         return (output,)
+
+class node_TokenCounter:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "clip": ("CLIP",),
+                "text": ("STRING", {"forceInput": True}),
+                }
+            }
+
+    RETURN_TYPES = ("STRING","INT",)
+    RETURN_NAMES = ("tkn_count_str","tkn_count_int",)
+    FUNCTION = "count_tokens"
+    CATEGORY = "lopi999/utils"
+
+    def count_tokens(self, clip, text):
+        # Based on the original code used in the CLIPTokenCounter node,
+        # made by pamparamm in ComfyUI-ppm.
+        lengths = []
+        blocks = []
+        special_tokens = set(clip.cond_stage_model.clip_l.special_tokens.values())
+        vocab = clip.tokenizer.clip_l.inv_vocab
+        prompts = text.split("BREAK")
+        for prompt in prompts:
+            if len(prompt) > 0:
+                tokens_pure = clip.tokenize(prompt)
+                tokens_concat = sum(tokens_pure["l"], [])
+                block = [t for t in tokens_concat if t[0] not in special_tokens]
+                blocks.append(block)
+
+        if len(blocks) > 0:
+            lengths = [str(len(b)) for b in blocks]
+        else:
+            lengths = ["0"]
+
+        result = lengths[0]
+        return (result, int(result),)
