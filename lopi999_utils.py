@@ -558,3 +558,33 @@ class node_ModelParameters:
             vae_name,
             vae_name,
         )
+
+class node_ParametersToString:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff, "control_after_generate": True, "tooltip": "The random seed used for creating the noise."}),
+                "steps": ("INT", {"default": 20, "min": 1, "max": 10000, "tooltip": "The number of steps used in the denoising process."}),
+                "cfg": ("FLOAT", {"default": 8.0, "min": 0.0, "max": 100.0, "step":0.1, "round": 0.01, "tooltip": "The Classifier-Free Guidance scale balances creativity and adherence to the prompt. Higher values result in images more closely matching the prompt however too high values will negatively impact quality."}),
+                "sampler": (comfy.samplers.KSampler.SAMPLERS, {"tooltip": "The algorithm used when sampling, this can affect the quality, speed, and style of the generated output."}),
+                "scheduler": (comfy.samplers.KSampler.SCHEDULERS, {"tooltip": "The scheduler controls how noise is gradually removed to form the image."}),
+                "denoise": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01, "tooltip": "The amount of denoising applied, lower values will maintain the structure of the initial image allowing for image to image sampling."}),
+                "prefix": ("STRING", {"multiline": False, "default": ", ", "tooltip": "Both concatenates and prefixes all items in the string."}),
+                "include_seed": ("BOOLEAN", {"default": True}),
+            }
+        }
+
+    RETURN_TYPES = ("STRING",)
+    FUNCTION = "to_string"
+    CATEGORY = "lopi999/utils"
+
+    def to_string(self, seed, steps, cfg, sampler, scheduler, denoise, prefix, include_seed):
+        initialPrefix = re.sub(
+            r'^(?:[,\s]+(?=[A-Za-z])|[,\s]+$)',
+            '',
+            prefix
+        )
+        output = (initialPrefix + ((f"Seed: {seed}" + prefix) if include_seed else "") + prefix.join((f"Steps: {steps}", f"CFG: {cfg}", f"Sampler: {sampler}", f"Scheduler: {scheduler}", f"Denoise: {denoise:.2f}")))
+
+        return (output,)
