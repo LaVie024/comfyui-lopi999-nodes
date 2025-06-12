@@ -8,12 +8,24 @@ In general, this is a sort of "general purpose" node suite, with some unique nod
 
 These two nodes are based on the burn and HSV treatment functions provided by Krita. Good for some post-processing after generating an image.
 
+## Logic Nodes
+
+### Invert Sign
+![Invert Sign](https://files.catbox.moe/m38wlc.png)
+
+Takes an int and/or a float, and inverts their sign if the mode's condition is met.
+
+### Round Float
+![Round Float](https://files.catbox.moe/3bosro.png)
+
+Receives a float, and rounds it to the given number of decimal places. Uses "standard" rounding, not banker's rounding or truncating.
+
 ## Random Nodes
 
 ### Random Boolean
-![Random Boolean](https://files.catbox.moe/k0ydtt.png)
+![Random Boolean](https://files.catbox.moe/p1nv5r.png)
 
-Straightforward and simple, just generates a True or a False randomly each time. Also contains int outputs for some extended modularity.
+Straightforward and simple, just generates a True or a False randomly each time. Contains an int output with a selectable range of +n for some added modularity.
 
 ### Random Normal Distribution
 ![Random Normal Distribution](https://files.catbox.moe/630bjv.png)
