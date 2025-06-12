@@ -6,17 +6,22 @@ import numpy as np
 class node_RandomBoolean:
     @classmethod
     def INPUT_TYPES(cls):
-        return {"required": {"seed": ("INT", {"default": 0, "min": 0, "max": 0xffffffffffffffff})}}
+        return {
+            "required": {
+                "seed": ("INT", {"default": 0, "min": 0, "max": 0x7FFFFFFFFFFFFFFF}),
+                "n": ("INT", {"default": 0, "min": -0x8000000000000000, "max": 0x7FFFFFFFFFFFFFFF})
+                }}
 
-    RETURN_TYPES = ("BOOLEAN", "INT", "INT")
-    RETURN_NAMES = ("BOOLEAN", "INT", "INT+1")
+    RETURN_TYPES = ("BOOLEAN", "INT",)
+    RETURN_NAMES = ("BOOLEAN", "INT+n",)
     FUNCTION = "randBool"
     CATEGORY = "lopi999/random"
 
-    def randBool(self, seed):
+    def randBool(self, seed, n):
         random.seed(seed)
-        x = random.randint(1, 100) % 2
-        return (bool(x), x, (x+1))
+        boole = random.choice([True, False])
+        result = bool(boole)
+        return (result, (int(result)+n),)
 
 class node_RandomSDXLLatentSize:
     RES_GROUPS = {
