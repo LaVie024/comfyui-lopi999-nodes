@@ -10,6 +10,11 @@ These two nodes are based on the burn and HSV treatment functions provided by Kr
 
 ## Logic Nodes
 
+### Does Exist
+![Does Exist](https://files.catbox.moe/aeh48e.png)
+
+Returns a boolean value based on whether or not a given output actually exists or not. Useful for adding some logic if a node is bypassed in a workflow.
+
 ### Invert Sign
 ![Invert Sign](https://files.catbox.moe/m38wlc.png)
 
