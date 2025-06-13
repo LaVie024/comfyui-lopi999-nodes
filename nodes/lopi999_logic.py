@@ -1,5 +1,30 @@
 import math
 
+class AnyType(str):
+    def __ne__(self, __value: object) -> bool:
+        return False
+
+any = AnyType("*")
+
+class node_DoesExist:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "optional": {
+                "variable": (any, )
+                }
+            }
+
+    RETURN_TYPES = ("BOOLEAN",)
+    FUNCTION = "test_existence"
+    CATEGORY = "lopi999/logic"
+
+    def test_existence(self, variable=None):
+        if variable is not None:
+            return (True,)
+
+        return (False,)
+
 class node_RoundFloat:
     @classmethod
     def INPUT_TYPES(cls):
