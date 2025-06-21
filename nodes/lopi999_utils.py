@@ -19,8 +19,8 @@ class node_SDXLEmptyLatentSizePicker_v2:
             "swap_dimensions": ("BOOLEAN", {"default": False}),
             }}
 
-    RETURN_TYPES = ("LATENT","INT","INT","STRING")
-    RETURN_NAMES = ("LATENT","width","height","resolution_text")
+    RETURN_TYPES = ("LATENT","INT","INT","STRING","INT")
+    RETURN_NAMES = ("LATENT","width","height","resolution_text","batch_size")
     FUNCTION     = "execute"
     CATEGORY     = "lopi999/utils"
 
@@ -34,7 +34,7 @@ class node_SDXLEmptyLatentSizePicker_v2:
 
         latent = torch.zeros([batch_size, 4, height // 8, width // 8], device=self.device)
 
-        return ({"samples":latent}, width, height,f"{width}x{height}")
+        return ({"samples":latent}, width, height,f"{width}x{height}", batch_size)
 
 class node_ModelParameters:
     ckpt_list = folder_paths.get_filename_list("checkpoints")
