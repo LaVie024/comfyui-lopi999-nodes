@@ -89,4 +89,6 @@ Credits to pamparamm for the original code provided here. The current code for p
 1. String is now a forced input instead of a multiline string being built into the node
 2. The node can now output an int as well as a string, useful for manipulation if needed.
 
+NOTE: Only works for SD1.5 and SDXL CLIP outputs.
+
 
