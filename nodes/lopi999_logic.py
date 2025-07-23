@@ -9,21 +9,14 @@ any = AnyType("*")
 class node_DoesExist:
     @classmethod
     def INPUT_TYPES(cls):
-        return {
-            "optional": {
-                "variable": (any, )
-                }
-            }
+        return {"optional": {"variable": (any,)}}
 
     RETURN_TYPES = ("BOOLEAN",)
+    CATEGORY = "utils/logic"
     FUNCTION = "test_existence"
-    CATEGORY = "lopi999/logic"
 
     def test_existence(self, variable=None):
-        if variable is not None:
-            return (True,)
-
-        return (False,)
+        return (variable is not None,)
 
 class node_RoundFloat:
     @classmethod
@@ -76,6 +69,28 @@ class node_InvertSign:
             cond = lambda x: x > 0
         else:
             cond = lambda x: x < 0
+
+class node_BooleanSwitch:
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "switch": ("BOOLEAN", {"default": True}),
+                },
+            "optional": {
+                "on_true": (any,),
+                "on_false": (any,),
+                }
+            }
+
+    RETURN_TYPES = (any,)
+    RETURN_NAMES = ("output",)
+    FUNCTION = "boolswitch"
+    CATEGORY = "lopi999/logic"
+
+    def boolswitch(self, switch, on_true=None, on_false=None):
+        return ((on_true if switch else on_false),)
+
 
         return (invert(in_float, cond), invert(in_int, cond),)
 
