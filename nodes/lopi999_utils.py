@@ -36,6 +36,38 @@ class node_SDXLEmptyLatentSizePicker_v2:
 
         return ({"samples":latent}, width, height,f"{width}x{height}", batch_size)
 
+class node_LuminaEmptyLatentPicker:
+    def __init__(self):
+        self.device = comfy.model_management.intermediate_device()
+
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {
+            "resolution": (["768x1532 (0.5)","896x1792 (0.5)","896x1664 (0.52)","960x1664 (0.57)","960x1600 (0.6)","1024x1536 (0.68)","1024x1472 (0.72)","968x1332 (0.73)","1152x1472 (0.78)","1152x1344 (0.82)","1216x1344 (0.88)","1216x1280 (0.94)","1024x1024 (1.0)","1280x1280 (1.0)","1280x1216 (1.8)","1344x1216 (1.14)","1344x1152 (1.22)","1472x1152 (1.3)","1332x968 (1.38)","1472x1024 (1.39)","1536x1024 (1.47)","1600x960 (1.68)","1664x960 (1.76)","1792x896 (2.0)","1532x768 (2.0)"],{"default": "1280x1280 (1.0)"}),
+            "batch_size": ("INT", {"default": 1, "min": 1, "max": 4096}),
+            "width_override": ("INT", {"default": 0, "min": 0, "max": MAX_RESOLUTION, "step": 8}),
+            "height_override": ("INT", {"default": 0, "min": 0, "max": MAX_RESOLUTION, "step": 8}),
+            "resolution_multiplier": ("FLOAT", {"default": 1.00, "min": 0.01, "max": 100, "step": 0.05}),
+            "swap_dimensions": ("BOOLEAN", {"default": False}),
+            }}
+
+    RETURN_TYPES = ("LATENT","INT","INT","STRING","INT")
+    RETURN_NAMES = ("LATENT","width","height","resolution_text","batch_size")
+    FUNCTION     = "execute"
+    CATEGORY     = "lopi999/utils"
+
+    def execute(self, resolution, batch_size, swap_dimensions, width_override=0, height_override=0, resolution_multiplier=1.0):
+        width, height = resolution.split(" ")[0].split("x")
+        width  = width_override  if width_override  > 0 else int(float(width)  * resolution_multiplier)
+        height = height_override if height_override > 0 else int(float(height) * resolution_multiplier)
+
+        if swap_dimensions:
+            width, height = height, width
+
+        latent = torch.zeros([batch_size, 16, height // 8, width // 8], device=self.device)
+
+        return ({"samples":latent}, width, height,f"{width}x{height}", batch_size)
+
 class node_ModelParameters:
     ckpt_list = folder_paths.get_filename_list("checkpoints")
     vae_list  = folder_paths.get_filename_list("vae")
