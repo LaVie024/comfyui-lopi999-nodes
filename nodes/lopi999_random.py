@@ -39,16 +39,16 @@ class node_RandomSDXLLatentSize:
             ("704x1344", 0.52), ("768x1344", 0.57), ("768x1280", 0.60),
             ("832x1216", 0.68), ("832x1152", 0.72), ("896x1152", 0.78),
             ("896x1088", 0.82), ("960x1088", 0.88), ("960x1024", 0.94),
-        ],
-        "square": [("1024x1024", 1.00)],
+            ("1024x1024", 1.00),
+        ]
     }
 
     @staticmethod
     def _make_opts(lst):
         return [f"{r} ({a:.2f})" for r, a in lst]
 
-    landscape_options = _make_opts.__func__(RES_GROUPS["landscape"] + RES_GROUPS["square"])
-    portrait_options  = _make_opts.__func__(RES_GROUPS["portrait"] + RES_GROUPS["square"])
+    landscape_options = _make_opts.__func__(RES_GROUPS["landscape"])
+    portrait_options  = _make_opts.__func__(RES_GROUPS["portrait"])
 
     def _def_idx(opts, txt):
         return opts.index(txt)
@@ -119,9 +119,6 @@ class node_RandomSDXLLatentSize:
         if portrait:
             candidates.append(("portrait",
                                [r for r in self.RES_GROUPS["portrait"] if _in(r[1], bounds["portrait"])]))
-
-        if landscape and portrait and any(_in(1.0, b) for b in bounds.values()):
-            candidates.append(("square", self.RES_GROUPS["square"]))
 
         if not candidates:
             res = "1024x1024"
