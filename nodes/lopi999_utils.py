@@ -93,7 +93,7 @@ class node_ModelParameters:
             }
         }
 
-    RETURN_TYPES = (ckpt_list, ckpt_list + ["None","pixel_space"], vae_list, ["Baked VAE","pixel_space"] + vae_list,)
+    RETURN_TYPES = (ckpt_list, ckpt_list + ["None"], vae_list, ["Baked VAE","pixel_space"] + vae_list,)
     RETURN_NAMES = ("ckpt_name_sans_none", "ckpt_name", "vae_name_sans_baked", "vae_name",)
     FUNCTION = "get_names"
     CATEGORY = "lopi999/utils"
