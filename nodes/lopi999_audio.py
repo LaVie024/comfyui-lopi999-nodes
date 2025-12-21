@@ -101,7 +101,7 @@ class node_LoadAudioBase64:
         auto_detect_extension: bool = True,
     ):
         if not isinstance(base64_audio, str) or not base64_audio.strip():
-            raise ValueError("base64_audio is empty.")
+            return (None,)
 
         payload = base64_audio
         ext = hint_extension
